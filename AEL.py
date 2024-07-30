@@ -50,7 +50,7 @@ class AEL:
         # Find all <li> tags within this <ul>
         li_tags = toc_list.find_all("li")
 
-        a_tags = []
+        self.chapters = []
         # Extract the text from <a> tags within <article> tags under each <li> tag
         for li in li_tags:
             article_tag = li.find("article", class_="toc-list-item")
@@ -60,16 +60,20 @@ class AEL:
                     href = a_tag["href"]
                     # Filter out sub-sections (href containing '#')
                     if not re.search(r"/book/\d+/.+?#", href):
-                        a_tags.append(a_tag)
+                        self.chapters.append(a_tag)
 
         # Print the Chapters
-        for a_tag in a_tags:
+        for chapter in self.chapters:
             # Get all contents of the <a> tag excluding <span> tags
             main_text = "".join(
                 [
                     str(content).strip()
-                    for content in a_tag.contents
+                    for content in chapter.contents
                     if not content.name == "span"
                 ]
             )
-            print(f"{main_text}\n")
+            return main_text
+
+    # TODO: Fetch download links from a_tags
+
+    # TODO: Download the chapters
