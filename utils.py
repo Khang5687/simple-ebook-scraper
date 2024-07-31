@@ -1,47 +1,33 @@
-import sqlite3
 import json
+import os
 
 
-def save_cookie(cookie_value):
-    # Connect to the SQLite database
-    conn = sqlite3.connect("cookies.sql")
+def save_cookie(cookie_value, expired=False):
+    # Create a dictionary with the cookie value and expired status
+    cookie_data = {"value": cookie_value, "expired": expired}
 
-    # Create a cursor object
-    cursor = conn.cursor()
-    # Create the cookies table if it does not exist
-    cursor.execute(
-        "CREATE TABLE IF NOT EXISTS cookies (id INTEGER PRIMARY KEY AUTOINCREMENT, cookie_value TEXT)"
-    )
-
-    # Insert the cookie_value into the cookies_table
-    cursor.execute(
-        "INSERT INTO cookies (cookie_value) VALUES (?)", (json.dumps(cookie_value),)
-    )
-
-    # Commit the transaction
-    conn.commit()
-
-    # Close the cursor and connection
-    cursor.close()
-    conn.close()
+    # Open the cookies.json file in append mode
+    with open("cookies.json", "w") as file:
+        # Write the cookie_data to the file
+        json.dump(cookie_data, file)
+        file.write("\n")  # Ensure each cookie is on a new line
 
 
 def load_cookie():
-    # Connect to the SQLite database
-    conn = sqlite3.connect("cookies.sql")
+    # Check if the cookies.json file exists
+    if not os.path.exists("cookies.json"):
+        return None
 
-    # Create a cursor object
-    cursor = conn.cursor()
+    # Open the cookies.json file in read mode
+    with open("cookies.json", "r") as file:
+        # Read all lines
+        lines = file.readlines()
 
-    # Execute SELECT query to fetch the latest cookie_text
-    cursor.execute("""SELECT cookie_value FROM cookies ORDER BY id DESC LIMIT 1""")
+    # Iterate over the lines in reverse order to find the most recent non-expired cookie
+    for line in reversed(lines):
+        cookie_data = json.loads(line)
+        if not cookie_data.get("expired", True):
+            return cookie_data
 
-    # Fetch the result
-    result = cursor.fetchone()
-
-    # Close the cursor and connection
-    cursor.close()
-    conn.close()
-
-    # Extract the cookie value if result is not None
-    return json.loads(result[0]) if result else None
+    # Return None if no non-expired cookie is found
+    return None
