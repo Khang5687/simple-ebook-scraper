@@ -1,9 +1,11 @@
 import os
 import re
-import requests
 import threading
+
+import requests
 from bs4 import BeautifulSoup
 from tqdm import tqdm
+
 from utils import load_cookie
 
 
