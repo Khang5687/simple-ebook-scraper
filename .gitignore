@@ -123,6 +123,7 @@ celerybeat.pid
 
 # Secrets
 cookies.json
+credentials.txt
 
 # Temporary files
 test.py
