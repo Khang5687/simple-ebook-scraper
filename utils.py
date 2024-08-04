@@ -1,33 +1,28 @@
-import json
 import os
+import json
 
 
-def save_cookie(cookie_value, expired=False):
-    # Create a dictionary with the cookie value and expired status
-    cookie_data = {"value": cookie_value, "expired": expired}
-
-    # Open the cookies.json file in append mode
+def save_cookie(cookie_value):
+    # Open the cookies.json file in write mode
     with open("cookies.json", "w") as file:
-        # Write the cookie_data to the file
-        json.dump(cookie_data, file)
-        file.write("\n")  # Ensure each cookie is on a new line
+        # Write the cookie_value to the file
+        json.dump(cookie_value, file, indent=4)
 
 
-def load_cookie():
+def load_cookie(is_str=False):
     # Check if the cookies.json file exists
     if not os.path.exists("cookies.json"):
         return None
 
     # Open the cookies.json file in read mode
     with open("cookies.json", "r") as file:
-        # Read all lines
-        lines = file.readlines()
+        # Load the cookie data
+        cookie_data = json.load(file)
 
-    # Iterate over the lines in reverse order to find the most recent non-expired cookie
-    for line in reversed(lines):
-        cookie_data = json.loads(line)
-        if not cookie_data.get("expired", True):
-            return cookie_data
-
-    # Return None if no non-expired cookie is found
-    return None
+    # Format the cookie data as a string
+    if is_str:
+        cookie_string = "; ".join(
+            [f"{key}={value}" for key, value in cookie_data.items()]
+        )
+        return cookie_string
+    return cookie_data
