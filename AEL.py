@@ -46,8 +46,6 @@ class AEL:
             "chapter": [],
         }
 
-        # TODO: Validate cookies, if not valid, ask for login
-
         # Default output folder
         self.source_dir = "output"
 
@@ -236,36 +234,56 @@ class AEL:
         if title is None:
             title = self.book_title
 
-        segments_dir = f"{self.source_dir}/segments"
+        segments_dir = os.path.join(self.source_dir, "segments")
         file_list = [
             os.path.join(segments_dir, f)
             for f in os.listdir(segments_dir)
             if f.endswith(".pdf")
         ]
 
+        # Check if there are chapters to merge
+        if not file_list:
+            print("No chapters to merge.")
+            return
+
         # Initialize an empty document to merge into
         doc = fitz.open()
 
         toc = []  # Initialize an empty table of contents
 
-        for filename in file_list:
-            page_count = len(doc)  # get current page count for resulting PDF
-            new = fitz.open(filename)  # Open the new file
-            new_toc = new.get_toc()  # extract its TOC
-            for i in range(len(new_toc)):  # walk through the bookmarks
-                bookmark = new_toc[i]  # a bookmark pointing to some somewhere
-                pno = bookmark[-1]  # the page number of this bookmark
-                if pno > 0:  # do this only if target indeed is a page!
-                    pno += page_count  # increase by current page count
-                    bookmark[-1] = pno  # update bookmark item
-                    new_toc[i] = bookmark  # update the TOC list
+        CHUNK_SIZE = 100  # Number of files to merge in each chunk
+        num_files = len(file_list)
+        num_chunks = (num_files // CHUNK_SIZE) + 1
 
-            doc.insert_pdf(new)  # insert file
-            toc.extend(new_toc)  # append modified TOC of inserted file
+        for chunk_index in range(num_chunks):
+            start_index = chunk_index * CHUNK_SIZE
+            end_index = min((chunk_index + 1) * CHUNK_SIZE, num_files)
+            chunk_files = file_list[start_index:end_index]
+
+            for filename in chunk_files:
+                page_count = len(doc)  # get current page count for resulting PDF
+                new = fitz.open(filename)  # Open the new file
+                new_toc = new.get_toc()  # extract its TOC
+                for i in range(len(new_toc)):  # walk through the bookmarks
+                    bookmark = new_toc[i]  # a bookmark pointing to some somewhere
+                    pno = bookmark[-1]  # the page number of this bookmark
+                    if pno > 0:  # do this only if target indeed is a page!
+                        pno += page_count  # increase by current page count
+                        bookmark[-1] = pno  # update bookmark item
+                        new_toc[i] = bookmark  # update the TOC list
+
+                doc.insert_pdf(new)  # insert file
+                toc.extend(new_toc)  # append modified TOC of inserted file
+
         doc.set_toc(toc)
         doc.save(f"{self.source_dir}/{title}.pdf")
         doc.close()
 
+        # TODO: Fix issue: being used by another process
         # Clean up the segments directory after merging
-        for file in os.listdir(segments_dir):
-            os.remove(f"{segments_dir}/{file}")
+        # for file in os.listdir(segments_dir):
+        #     os.remove(f"{segments_dir}/{file}")
+
+        absolute_path = os.path.abspath(f"{self.source_dir}/{title}.pdf")
+        print(f"Successfully merged chapters!\n")
+        print(f"File is saved under: {absolute_path}")
