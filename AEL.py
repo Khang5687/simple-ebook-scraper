@@ -12,8 +12,7 @@ class AEL:
         self.session = requests.Session()
 
         # Update cookies and headers
-        cookies_dict = load_cookie()
-        self.session.cookies.update(cookies_dict)
+        self.session.cookies.update(load_cookie())
 
         # Headers to bypass "Access Denied" when trying to download certain chapters
         self.session.headers.update(
@@ -23,15 +22,15 @@ class AEL:
                 "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/png,image/svg+xml,*/*;q=0.8",
                 "Accept-Language": "en,en-US;q=0.5",
                 "Accept-Encoding": "gzip, deflate, br, zstd",
-                "Referer": "https://www.accessengineeringlibrary.com/",
                 "DNT": "1",
                 "Sec-GPC": "1",
                 "Connection": "keep-alive",
+                "Referer": "https://www.accessengineeringlibrary.com/",
                 "Cookie": load_cookie(is_str=True),
                 "Upgrade-Insecure-Requests": "1",
                 "Sec-Fetch-Dest": "document",
                 "Sec-Fetch-Mode": "navigate",
-                "Sec-Fetch-Site": "cross-site",
+                "Sec-Fetch-Site": "same-origin",
                 "Sec-Fetch-User": "?1",
             }
         )
@@ -62,8 +61,11 @@ class AEL:
                 print("Did not reach response.get")
                 return None
 
-        # Remove all the subdirectories from the URL
-        # Example: https://www.accessengineeringlibrary.com/content/book/9780071793056
+        """Remove all the subdirectories from the URL
+        
+        Example input: https://www.accessengineeringlibrary.com/content/book/9780071793056/front-matter/preface1
+        Example output: https://www.accessengineeringlibrary.com/content/book/9780071793056
+        """
         url = re.sub(r"(/book/\d+).*", r"\1/", url)
         # Append /front-matter/preface1 to the url
         placeholder_url = url + "front-matter/preface1"
@@ -137,6 +139,10 @@ class AEL:
             # Generate the file path to save the downloaded file with an index
             file_path = f"segments/{index:03d}_{chapter_name}.pdf"
 
+            # Check if the "Referer" header needs to be updated
+            if self.session.headers.get("Referer") != chapter_link:
+                self.session.headers.update({"Referer": chapter_link})
+
             # Send a GET request to get PDF download link
             # print("Sending request to {}".format(chapter_link))
             response = self.session.get(chapter_link)
@@ -172,7 +178,8 @@ class AEL:
                 if total_size != 0 and t.n != total_size:
                     print(f"Failed to download {chapter_name}.pdf")
                 else:
-                    print(f"Downloaded {chapter_name}.pdf")
+                    # print(f"Downloaded {chapter_name}.pdf")
+                    pass
             else:
                 print(f"Failed to download {chapter_name}.pdf")
 
