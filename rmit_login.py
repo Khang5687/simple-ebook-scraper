@@ -1,5 +1,5 @@
 import pathlib
-from utils import save_cookie
+from utils import save_cookies
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -115,7 +115,7 @@ def login(email, password):
 
     # Return or print the cookie value
     if cookies:
-        save_cookie(cookies)
+        save_cookies(cookies)
         return cookies
     else:
         return None

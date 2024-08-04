@@ -2,12 +2,12 @@ import os
 import re
 import threading
 
+import fitz  # PyMuPDF
 import requests
 from bs4 import BeautifulSoup
 from tqdm import tqdm
 
-from utils import load_cookie
-from utils import sanitize_filename
+from utils import load_cookies, convert_cookies, sanitize_filename
 
 
 class AEL:
@@ -15,7 +15,8 @@ class AEL:
         self.session = requests.Session()
 
         # Update cookies and headers
-        self.session.cookies.update(load_cookie())
+        cookies = load_cookies()
+        self.session.cookies.update(cookies)
 
         # Headers to bypass "Access Denied" when trying to download certain chapters
         self.session.headers.update(
@@ -29,7 +30,7 @@ class AEL:
                 "Sec-GPC": "1",
                 "Connection": "keep-alive",
                 "Referer": "https://www.accessengineeringlibrary.com/",
-                "Cookie": load_cookie(is_str=True),
+                "Cookie": convert_cookies(cookies),
                 "Upgrade-Insecure-Requests": "1",
                 "Sec-Fetch-Dest": "document",
                 "Sec-Fetch-Mode": "navigate",
@@ -40,19 +41,17 @@ class AEL:
         self.url = "https://www.accessengineeringlibrary.com"
         self.chapters = []
         self.chapter_links = []
-        # self.failed_downloads = {
-        #     "count": 0,
-        #     "chapter": [],
-        # }
+        self.failed_downloads = {
+            "count": 0,
+            "chapter": [],
+        }
 
         # TODO: Validate cookies, if not valid, ask for login
 
-        self.headers = {"Cookie": load_cookie()}
-
         # Default output folder
-        self.folder_name = "output"
+        self.source_dir = "output"
 
-    def getTitle(self, userInput):
+    def get_title(self, userInput):
         if re.search(
             r"https?://(?:\w+\.)?accessengineeringlibrary\.com/content/book/\d+",
             userInput,
@@ -64,7 +63,6 @@ class AEL:
                 # URL is a number
                 url = f"{self.url}/content/book/{userInput}"
             else:
-                print("Did not reach response.get")
                 return None
 
         """Remove all the subdirectories from the URL
@@ -72,21 +70,28 @@ class AEL:
         Example input: https://www.accessengineeringlibrary.com/content/book/9780071793056/front-matter/preface1
         Example output: https://www.accessengineeringlibrary.com/content/book/9780071793056
         """
-        url = re.sub(r"(/book/\d+).*", r"\1/", url)
+        pattern = re.compile(r"(/book/\d+).*")
+        url = pattern.sub(r"\1/", url)
         # Append /front-matter/preface1 to the url
         placeholder_url = url + "front-matter/preface1"
-        self.response = self.session.get(placeholder_url)
+        try:
+            self.response = self.session.get(placeholder_url)
+            self.response.raise_for_status()  # Check if the request was successful
+        except requests.exceptions.RequestException as e:
+            print(f"Failed to send request: {e}")
+            self.response = None
         if self.response.status_code == 200:
             match = re.search(
                 r'name="f\[0\]" value="book_title:([^"]+)"', self.response.text
             )
-            book_title = match.group(1) if match else None
+            book_title = match.group(1) if match and match.group(1) else None
+            self.book_title = book_title
             return book_title
         return None
 
-    def getChapters(self) -> str:
+    def get_chapters(self) -> str:
         """
-        This method retrieves the chapters of the book as a string for printing.
+        This method retrieves all chapters that can be downloaded
         The actual HTML elements array can be accessed by self.chapters.
 
         Returns:
@@ -117,6 +122,10 @@ class AEL:
                                 if not content.name == "span"
                             ]
                         )
+
+                        if chapter_name == "Overview":
+                            continue
+
                         # Page link is the URL + href attribute of the <a> tag
                         chapter_page_link = self.url + href
 
@@ -128,7 +137,7 @@ class AEL:
                         }
                         self.chapters.append(chapter_template)
 
-    def downloadChapters(self, use_threading=True):
+    def download_chapters(self, use_threading=True):
         """Download chapters via PDF links from self.chapters
 
         Args:
@@ -136,10 +145,15 @@ class AEL:
         """
         # Create a directory to store the downloaded files
         # "segments" is the folder which store multiple chapters PDF files
-        if not os.path.exists(self.folder_name):
-            os.makedirs(self.folder_name)
+        if not os.path.exists(self.source_dir):
+            os.makedirs(self.source_dir)
             # Ensure the "segments" folder exists
-            os.makedirs(f"{self.folder_name}/segments")
+            os.makedirs(f"{self.source_dir}/segments")
+
+        # Clean up in case of failed downloads
+        # Delete all files within the "segments" folder
+        for file in os.listdir(f"{self.source_dir}/segments"):
+            os.remove(f"{self.source_dir}/segments/{file}")
 
         def download_chapter(chapter, index):
             chapter_name = chapter["name"]
@@ -147,7 +161,7 @@ class AEL:
 
             # Generate the file path to save the downloaded file with an index
             file_name = sanitize_filename(chapter_name)
-            file_path = f"{self.folder_name}/segments/{index:03d}_{file_name}.pdf"
+            file_path = f"{self.source_dir}/segments/{index:03d}_{file_name}.pdf"
 
             # Check if the "Referer" header needs to be updated
             if self.session.headers.get("Referer") != chapter_link:
@@ -191,6 +205,8 @@ class AEL:
                     # print(f"Downloaded {chapter_name}.pdf")
                     pass
             else:
+                self.failed_downloads["count"] += 1
+                self.failed_downloads["chapter"].append(chapter_name)
                 print(f"Failed to download {chapter_name}.pdf")
 
         # Download the chapters in order

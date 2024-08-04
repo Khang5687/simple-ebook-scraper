@@ -3,14 +3,14 @@ import re
 import json
 
 
-def save_cookie(cookie_value):
+def save_cookies(cookie_value):
     # Open the cookies.json file in write mode
     with open("cookies.json", "w") as file:
         # Write the cookie_value to the file
         json.dump(cookie_value, file, indent=4)
 
 
-def load_cookie(is_str=False):
+def load_cookies():
     # Check if the cookies.json file exists
     if not os.path.exists("cookies.json"):
         return None
@@ -20,14 +20,13 @@ def load_cookie(is_str=False):
         # Load the cookie data
         cookie_data = json.load(file)
 
-    # Format the cookie data as a string
-    if is_str:
-        cookie_string = "; ".join(
-            [f"{key}={value}" for key, value in cookie_data.items()]
-        )
-        return cookie_string
     return cookie_data
 
 
+def convert_cookies(cookies):
+    cookies_str = "; ".join([f"{key}={value}" for key, value in cookies.items()])
+    return cookies_str
+
+
 def sanitize_filename(filename):
-    return re.sub(r'[<>:"/\\|?*]', "", filename)
+    return re.sub(r'[<>:"/\\|?*]', "", filename).strip()
