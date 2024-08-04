@@ -80,6 +80,10 @@ class AEL:
         except requests.exceptions.RequestException as e:
             print(f"Failed to send request: {e}")
             self.response = None
+            if self.response is not None:
+                return
+            else:
+                return None
         if self.response.status_code == 200:
             match = re.search(
                 r'name="f\[0\]" value="book_title:([^"]+)"', self.response.text
@@ -189,7 +193,7 @@ class AEL:
                     total=total_size,
                     unit="iB",
                     unit_scale=True,
-                    desc=f"Downloading {chapter_name}.pdf",
+                    desc=f"Downloading {chapter_name}",
                 )
 
                 # Save the downloaded file to the specified file path
@@ -227,3 +231,41 @@ class AEL:
                 download_chapter(chapter, index)
 
     # TODO: Handle error when downloading chapters, i.e. PyPDF2.errors.PdfReadError: EOF marker not found which indicates that the cookie is invalid
+
+    def merge_chapters(self, title=None):
+        if title is None:
+            title = self.book_title
+
+        segments_dir = f"{self.source_dir}/segments"
+        file_list = [
+            os.path.join(segments_dir, f)
+            for f in os.listdir(segments_dir)
+            if f.endswith(".pdf")
+        ]
+
+        # Initialize an empty document to merge into
+        doc = fitz.open()
+
+        toc = []  # Initialize an empty table of contents
+
+        for filename in file_list:
+            page_count = len(doc)  # get current page count for resulting PDF
+            new = fitz.open(filename)  # Open the new file
+            new_toc = new.get_toc()  # extract its TOC
+            for i in range(len(new_toc)):  # walk through the bookmarks
+                bookmark = new_toc[i]  # a bookmark pointing to some somewhere
+                pno = bookmark[-1]  # the page number of this bookmark
+                if pno > 0:  # do this only if target indeed is a page!
+                    pno += page_count  # increase by current page count
+                    bookmark[-1] = pno  # update bookmark item
+                    new_toc[i] = bookmark  # update the TOC list
+
+            doc.insert_pdf(new)  # insert file
+            toc.extend(new_toc)  # append modified TOC of inserted file
+        doc.set_toc(toc)
+        doc.save(f"{self.source_dir}/{title}.pdf")
+        doc.close()
+
+        # Clean up the segments directory after merging
+        for file in os.listdir(segments_dir):
+            os.remove(f"{segments_dir}/{file}")
