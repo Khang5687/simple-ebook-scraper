@@ -7,6 +7,7 @@ from bs4 import BeautifulSoup
 from tqdm import tqdm
 
 from utils import load_cookie
+from utils import sanitize_filename
 
 
 class AEL:
@@ -47,6 +48,9 @@ class AEL:
         # TODO: Validate cookies, if not valid, ask for login
 
         self.headers = {"Cookie": load_cookie()}
+
+        # Default output folder
+        self.folder_name = "output"
 
     def getTitle(self, userInput):
         if re.search(
@@ -131,15 +135,19 @@ class AEL:
             use_threading (bool, optional): Enable threading to allow multiple download sessions. Defaults to True.
         """
         # Create a directory to store the downloaded files
-        if not os.path.exists("segments"):
-            os.makedirs("segments")
+        # "segments" is the folder which store multiple chapters PDF files
+        if not os.path.exists(self.folder_name):
+            os.makedirs(self.folder_name)
+            # Ensure the "segments" folder exists
+            os.makedirs(f"{self.folder_name}/segments")
 
         def download_chapter(chapter, index):
             chapter_name = chapter["name"]
             chapter_link = chapter["page_link"]
 
             # Generate the file path to save the downloaded file with an index
-            file_path = f"segments/{index:03d}_{chapter_name}.pdf"
+            file_name = sanitize_filename(chapter_name)
+            file_path = f"{self.folder_name}/segments/{index:03d}_{file_name}.pdf"
 
             # Check if the "Referer" header needs to be updated
             if self.session.headers.get("Referer") != chapter_link:

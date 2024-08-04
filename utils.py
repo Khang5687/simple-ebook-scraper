@@ -1,4 +1,5 @@
 import os
+import re
 import json
 
 
@@ -26,3 +27,7 @@ def load_cookie(is_str=False):
         )
         return cookie_string
     return cookie_data
+
+
+def sanitize_filename(filename):
+    return re.sub(r'[<>:"/\\|?*]', "", filename)
