@@ -14,10 +14,6 @@ class AEL:
     def __init__(self):
         self.session = requests.Session()
 
-        # Update cookies and headers
-        cookies = load_cookies()
-        self.session.cookies.update(cookies)
-
         # Headers to bypass "Access Denied" when trying to download certain chapters
         self.session.headers.update(
             {
@@ -30,7 +26,6 @@ class AEL:
                 "Sec-GPC": "1",
                 "Connection": "keep-alive",
                 "Referer": "https://www.accessengineeringlibrary.com/",
-                "Cookie": convert_cookies(cookies),
                 "Upgrade-Insecure-Requests": "1",
                 "Sec-Fetch-Dest": "document",
                 "Sec-Fetch-Mode": "navigate",
@@ -48,6 +43,26 @@ class AEL:
 
         # Default output folder
         self.source_dir = "output"
+
+    def validate_cookies(self):
+        if not os.path.exists("cookies.json"):
+            return False
+        # Update cookies and headers
+        cookies = load_cookies()
+        if cookies is None:
+            return False
+
+        # Assign cookies
+        self.session.cookies.update(cookies)
+        self.session.headers.update({"Cookie": convert_cookies(cookies)})
+
+        # Validate the cookies by sending a HEAD request to a placeholder URL
+        placeholder_url = "https://www.accessengineeringlibrary.com/binary/mheaeworks/1b284231f16268b3/08c7cb10c9937a58ab333aa8cec5334e7e2d4d1e031fc6ad825e868cbdc8dee5/demand-management-impact-on-lean-six-sigma-projects.pdf"
+        response = self.session.head(placeholder_url)
+
+        if response.status_code == 200:
+            return True
+        return False
 
     def get_title(self, userInput):
         if re.search(
@@ -284,6 +299,11 @@ class AEL:
         # for file in os.listdir(segments_dir):
         #     os.remove(f"{segments_dir}/{file}")
 
-        absolute_path = os.path.abspath(f"{self.source_dir}/{title}.pdf")
-        print(f"Successfully merged chapters!\n")
-        print(f"File is saved under: {absolute_path}")
+        absolute_path = os.path.abspath(f"{self.source_dir}/")
+        message_str = f"File name: {title}.pdf\nFile được lưu vào: {absolute_path}"
+        return True, message_str
+
+    def clean_up(self):
+        # Clean up the segments directory after merging
+        for file in os.listdir(f"{self.source_dir}/segments"):
+            os.remove(f"{self.source_dir}/segments/{file}")
