@@ -247,7 +247,7 @@ class AEL:
 
     def merge_chapters(self, title=None):
         if title is None:
-            title = self.book_title
+            title = sanitize_filename(self.book_title)
 
         segments_dir = os.path.join(self.source_dir, "segments")
         file_list = [
