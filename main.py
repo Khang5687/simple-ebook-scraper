@@ -54,7 +54,7 @@ def login_credentials(is_change=False):
     password = os.getenv("PASSWORD")
 
     if (email == "" and password == "") or is_change:
-        email = input("Email đăng nhập tài khoản RMIT: ")
+        email = input("Email đăng nhập tài khoản \033[91mRMIT\033[0m: ")
         password = pwinput("Nhập mật khẩu: ")
     else:
         print(
@@ -105,10 +105,10 @@ def download_book():
     if not ael.validate_cookies():
         print(
             "\033[91m"
-            + "Cookies không có hoặc hết hạn, phải đăng nhập lại mới tải được sách.\n"
+            + "Cookies không có hoặc hết hạn"
             + "\033[0m"
         )
-
+        print("\033[1m" + "Phải đăng nhập mới tải được sách.\n" + "\033[0m")
         print("Bạn có muốn đăng nhập ngay bây giờ không? (nhập ký tự Y hoặc N)")
         print("[Y] Đăng nhập\n[N] Thoát")
         choice = input(">> ").lower()
