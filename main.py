@@ -31,9 +31,7 @@ else:
     import termios
 
 
-def await_keypress(message):
-    if message is None:
-        message = "Ấn nút bất kì để tiếp tục..."
+def await_keypress(message="Ấn nút bất kì để tiếp tục..."):
     print(message)
     if platform.system() == "Windows":  # For Windows
         msvcrt.getch()
