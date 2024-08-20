@@ -5,6 +5,24 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+
+
+def check_failed_login(driver):
+    try:
+        # Wait for the div with id "nam-login-tabs-div" to be present
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.ID, "nam-login-tabs-div"))
+        )
+
+        # Check for the "globalMessage" div and its text content
+        global_message = driver.find_element(By.ID, "globalMessage")
+        if global_message and global_message.text.startswith("Login failed"):
+            print("Login failed, please try again.")
+            return True
+    except Exception as e:
+        print(f"An error occurred: {e}")
+    return False
 
 
 def format_cookies(cookies):
@@ -35,15 +53,18 @@ def format_cookies(cookies):
 
 
 def login(email, password):
+    if not email or not password:
+        return None
     # Initialize WebDriver, allocating a user-data-dir to store cookies
     # user-data-dir: .\selenium
     chrome_options = Options()
-    chrome_options.add_argument(f"user-data-dir={pathlib.Path().absolute()}\\web_cache")
     chrome_options.add_argument("log-level=3")
     chrome_options.add_argument("no-sandbox")
-    chrome_options.add_argument("--headless")
+    # chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--ignore-certificate-errors")
+    chrome_options.add_argument("--ignore-ssl-errors")
+    chrome_options.add_experimental_option("excludeSwitches", ["enable-logging"])
     driver = webdriver.Chrome(options=chrome_options)
-
     # Navigate to target URL
     # This URL is the RMIT Library database, used as a placeholder to trigger the Microsoft login page
     driver.get(
@@ -68,28 +89,33 @@ def login(email, password):
         else:
             return None
 
-    # Input email
-    email_input = driver.find_element(By.ID, "Ecom_User_ID")
-    email_input.send_keys(email)
+    try:
+        # Input email
+        email_input = WebDriverWait(driver, 10).until(
+            EC.visibility_of_element_located((By.ID, "Ecom_User_ID"))
+        )
+        email_input.send_keys(email)
 
-    # Wait for password input to be visible
-    WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.ID, "Ecom_Password"))
-    )
+        # Input password and submit
+        password_input = WebDriverWait(driver, 10).until(
+            EC.visibility_of_element_located((By.ID, "Ecom_Password"))
+        )
+        password_input.send_keys(password)
 
-    # Input password and submit
-    password_input = WebDriverWait(driver, 10).until(
-        EC.visibility_of_element_located((By.ID, "Ecom_Password"))
-    )
-    password_input.send_keys(password)
+        # Click login button
+        login_button = driver.find_element(By.NAME, "loginButton2")
+        login_button.click()
 
-    # Click login button
-    login_button = driver.find_element(By.NAME, "loginButton2")
-    login_button.click()
+        if check_failed_login(driver):
+            print("It worked!")
+            driver.quit()
+            return None
+    except:
+        return None
 
     # Wait for cookies to have 2 keys "Drupal_visitor_sigma_known_user" and anything starts with "SSESS"
     try:
-        WebDriverWait(driver, 20).until(
+        WebDriverWait(driver, 6).until(
             lambda driver: len(
                 [
                     cookie
@@ -103,7 +129,6 @@ def login(email, password):
             )
         )
     except:
-        print("Login failed")
         driver.quit()
         return None
 
@@ -116,6 +141,6 @@ def login(email, password):
     # Return or print the cookie value
     if cookies:
         save_cookies(cookies)
-        return cookies
+        return True
     else:
-        return None
+        return False
