@@ -163,9 +163,15 @@ def download_book():
 
 
 def clean_up():
-    ael.clean_up()
+    try:
+        ael.clean_up()
+    except:
+        print("\033[91m" + "Thất bại!" + "\033[0m")
+        await_keypress("Có lỗi xảy ra khi dọn rác, hãy thử lại, ấn nút bất kì để tiếp tục...")
+        return
     print("\033[92m" + "Thành công!" + "\033[0m")
     await_keypress("Đã dọn xong rác, ấn nút bất kì để tiếp tục...")
+    return 
 
 
 if __name__ == "__main__":
