@@ -36,9 +36,9 @@ python main.py
 
 ## Known Issue
 
-- Google Chrome may not properly exits after a login session, which uses up most of the system's CPU and Ram, causing system instability and stutters.
+- Google Chrome may not properly exits after a login session, which uses up most of the system's CPU and Ram, causing system instability and stutters. This typically only happens when you login to your RMIT account, which uses Chrome to get your cookies session. *Will get addressed in the **next version***
 
-  - **Temporary fix**: NOTE THAT THIS WOULD CLOSE ALL PROCESSES OF **CHROME**, make sure to save your work before you run these commands!
+  **Temporary fix**: NOTE THAT THIS WOULD CLOSE ALL PROCESSES OF **CHROME**, make sure to save your work before you run these commands!
 
     - **Windows**: `taskkill /im chrome.exe /f`
     - **MacOS**: `killall -9 "Google Chrome"`
