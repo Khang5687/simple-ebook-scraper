@@ -1,5 +1,7 @@
 # AccessEngineeringLibrary Downloader
 
+https://github.com/user-attachments/assets/8ea410eb-4877-4432-8ff0-20f6eb956a69
+
 A Python application that can automatically download all chapters from [Access Engineering Library](https://www.accessengineeringlibrary.com) and merge them into a fully readable PDF file.
 
 **Requires:** Access to Access Engineering Library
